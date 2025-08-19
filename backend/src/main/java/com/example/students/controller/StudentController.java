@@ -80,22 +80,58 @@ public class StudentController {
                 .body(data);
     }
 
+    /**
+     * Download Excel template for subject-wise marks.
+     */
+    @GetMapping("/marksheet/template")
+    public ResponseEntity<byte[]> downloadMarksTemplate() throws IOException {
+        byte[] data = excelService.generateMarksTemplate();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Marks_Template.xlsx")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(data);
+    }
+
     @PostMapping("/{id}/marks/upload")
-    public StudentResponse uploadMarks(@PathVariable Long id, @RequestParam("file") MultipartFile file) throws IOException {
+    public StudentResponse uploadMarks(@PathVariable Long id, @RequestParam("file") MultipartFile file)
+            throws IOException {
         StudentResponse resp = excelService.parseMarksUpload(id, file);
         fileStorageService.saveFile(resp.getRollNumber(), file);
         return resp;
     }
 
+    /**
+     * Upload and save subject-wise marks from Excel template.
+     */
+    @PostMapping("/{id}/marksheet/upload")
+    public MarksheetResponse uploadMarksTemplate(@PathVariable Long id, @RequestParam("file") MultipartFile file)
+            throws IOException {
+        return excelService.parseMarksheetTemplate(id, file);
+    }
+
     @GetMapping("/marksheets/{rollNumber}/download")
-    public ResponseEntity<Resource> downloadMarks(@PathVariable Long rollNumber, HttpServletRequest request) throws MalformedURLException {
+    public ResponseEntity<Resource> downloadMarks(@PathVariable Long rollNumber, HttpServletRequest request)
+            throws MalformedURLException {
         Path filePath = fileStorageService.resolveStudentFolder(rollNumber);
         Resource resource = new UrlResource(filePath.toUri());
         String contentType = request.getServletContext().getMimeType(resource.getFilename());
-        if (contentType == null) contentType = "application/octet-stream";
+        if (contentType == null)
+            contentType = "application/octet-stream";
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + resource.getFilename())
                 .body(resource);
+    }
+
+    /**
+     * Download subject-wise marksheet for a student.
+     */
+    @GetMapping("/{id}/marksheet/download")
+    public ResponseEntity<byte[]> downloadMarksheet(@PathVariable Long id) throws IOException {
+        byte[] data = excelService.generateMarksheetDownload(id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Marksheet_" + id + ".xlsx")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(data);
     }
 }

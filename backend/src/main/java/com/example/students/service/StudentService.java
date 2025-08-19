@@ -24,6 +24,8 @@ public class StudentService {
 
     @Autowired
     private StudentRepository repo;
+    @Autowired
+    private com.example.students.repository.MarksheetRepository marksheetRepository;
 
     private Long nextRollNumber() {
         return repo.findMaxRollNumber() + 1;
@@ -44,14 +46,16 @@ public class StudentService {
      * Get paged list with optional filters.
      */
     public PagedResponse<StudentResponse> list(int page, int size, String sortBy, String sortDir,
-                                              String firstName, String lastName,
-                                              Integer minMarks, Integer maxMarks) {
+            String firstName, String lastName,
+            Integer minMarks, Integer maxMarks) {
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<Student> pg = repo.filter(firstName, lastName, minMarks, maxMarks, pageable);
         List<StudentResponse> content = pg.getContent().stream()
                 .map(StudentMapper::toResponse)
                 .collect(Collectors.toList());
+        // set hasMarksheet flag for each student
+        content.forEach(sr -> sr.setHasMarksheet(marksheetRepository.existsByStudentId(sr.getId())));
         PagedResponse<StudentResponse> response = new PagedResponse<>();
         response.setContent(content);
         response.setPage(pg.getNumber());
@@ -71,6 +75,14 @@ public class StudentService {
         StudentMapper.updateEntity(student, req);
         Student updated = repo.save(student);
         return StudentMapper.toResponse(updated);
+    }
+
+    /**
+     * Expose entity for internal use (e.g., marksheet creation).
+     */
+    public Student findEntity(Long id) {
+        return repo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Student", "id", id));
     }
 
     /**

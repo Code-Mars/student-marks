@@ -67,6 +67,17 @@ public class StudentResponse {
         return updatedAt;
     }
 
+    // Flag indicating a detailed marksheet exists
+    private boolean hasMarksheet;
+
+    public boolean isHasMarksheet() {
+        return hasMarksheet;
+    }
+
+    public void setHasMarksheet(boolean hasMarksheet) {
+        this.hasMarksheet = hasMarksheet;
+    }
+
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }

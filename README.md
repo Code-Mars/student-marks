@@ -7,7 +7,7 @@ This repository contains a full-stack application for managing student marksheet
 - **Frontend**: React 18, Vite, PrimeReact, Bootstrap, Axios, SheetJS
 - **Backend**: Spring Boot 3.1+, Java 17, Spring Data JPA, Validation, Lombok, Springdoc OpenAPI, MySQL, Apache POI
 - **Storage**: Local disk under `Marksheets/{rollNumber}`
-- **Container**: Docker Compose for MySQL
+- **Database**: MySQL (local installation)
 
 ## Prerequisites
 
@@ -15,34 +15,42 @@ This repository contains a full-stack application for managing student marksheet
 - Maven 3.6+
 - Node.js 16+
 - npm
-- Docker (optional for MySQL)
+  -- MySQL Server (install locally)
 
 ## Setup
 
+### Database Setup
+
+1. Install and start MySQL Server.
+2. In a MySQL client, execute:
+   ```sql
+   CREATE DATABASE students;
+   ```
+3. Open `backend/src/main/resources/application.yml` and update `spring.datasource` username/password to match your MySQL setup.
+
 ### Backend
 
-1. Ensure a local MySQL server is running on `localhost:3306` with a database named `students`.
-   - Default credentials in `application.yml` are `root` / `root`; update as needed.
-2. Build and run the application:
+1. Build and run the Spring Boot application:
    ```bash
    cd backend
    mvn clean install
    mvn spring-boot:run
    ```
-3. Access Swagger UI: http://localhost:8080/swagger-ui.html
+2. The API base URL is `http://localhost:8080/api/v1`.
+3. Swagger/OpenAPI UI: http://localhost:8080/swagger-ui.html
 
 ### Frontend
 
-1.  Create a `.env` file in the project root with:
+1.  In the project root, create a `.env` file containing:
     ```env
     VITE_API_BASE_URL=http://localhost:8080/api/v1
     ```
-2.  Install and start:
+2.  Install dependencies and start the Vite dev server:
     ```bash
     npm install
     npm run dev
     ```
-3.  Open: http://localhost:5173
+3.  Open the app: http://localhost:5173
 
 ## API Endpoints (base: `/api/v1`)
 
@@ -56,9 +64,12 @@ This repository contains a full-stack application for managing student marksheet
 
 ### Templates & Marksheets
 
-- `GET /students/template` Download Excel template
-- `POST /students/{id}/marks/upload` Upload marks for a student
-- `GET /students/marksheets/{rollNumber}/download` Download stored marksheet
+- `GET  /students/template` Download blank student template (Excel)
+- `GET  /students/marksheet/template` Download marksheet template (subjects Excel)
+- `POST /students/{id}/marksheet/upload` Upload filled marksheet for a student
+- `GET  /students/{id}/marksheet/download` Download processed marksheet for a student
+- `POST /students/{id}/marks/upload` Upload simple marks list for a student
+- `GET  /students/marksheets/{rollNumber}/download` Legacy: download stored marksheet
 
 ## Postman Collection
 

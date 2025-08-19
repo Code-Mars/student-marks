@@ -5,6 +5,8 @@ import com.example.students.dto.BulkUploadResponse.RowError;
 import com.example.students.dto.StudentCreateRequest;
 import com.example.students.dto.StudentResponse;
 import com.example.students.model.Student;
+import com.example.students.model.Marksheet;
+import com.example.students.repository.MarksheetRepository;
 import com.example.students.repository.StudentRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -29,9 +31,11 @@ public class ExcelService {
     private static final String SHEET_NAME = "Template";
 
     private final StudentService studentService;
+    private final MarksheetRepository marksheetRepository;
 
-    public ExcelService(StudentService studentService) {
+    public ExcelService(StudentService studentService, MarksheetRepository marksheetRepository) {
         this.studentService = studentService;
+        this.marksheetRepository = marksheetRepository;
     }
 
     /**
@@ -63,7 +67,8 @@ public class ExcelService {
                 throw new IllegalArgumentException("Sheet " + SHEET_NAME + " not found");
             }
             Iterator<Row> rows = sheet.rowIterator();
-            if (rows.hasNext()) rows.next(); // skip header
+            if (rows.hasNext())
+                rows.next(); // skip header
             int rowNum = 1;
             while (rows.hasNext()) {
                 rowNum++;
@@ -100,7 +105,8 @@ public class ExcelService {
                 throw new IllegalArgumentException("Sheet " + SHEET_NAME + " not found");
             }
             Row row = sheet.getRow(1);
-            if (row == null) throw new IllegalArgumentException("No data row found");
+            if (row == null)
+                throw new IllegalArgumentException("No data row found");
             int marks = (int) row.getCell(2).getNumericCellValue();
             return studentService.update(id, createUpdateRequest(marks, id));
         }
@@ -116,5 +122,79 @@ public class ExcelService {
         req.setLastName(existing.getLastName());
         req.setMarks(marks);
         return req;
+    }
+
+    /**
+     * Generate an Excel template for subject-wise marks: English, Science, Maths.
+     */
+    public byte[] generateMarksTemplate() throws IOException {
+        try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = wb.createSheet("MarksTemplate");
+            Row header = sheet.createRow(0);
+            header.createCell(0).setCellValue("English");
+            header.createCell(1).setCellValue("Science");
+            header.createCell(2).setCellValue("Maths");
+            wb.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    /**
+     * Parse subject-wise marks Excel and save in Marksheet entity.
+     */
+    public com.example.students.dto.MarksheetResponse parseMarksheetTemplate(Long studentId, MultipartFile file)
+            throws IOException {
+        try (InputStream in = file.getInputStream(); Workbook wb = new XSSFWorkbook(in)) {
+            Sheet sheet = wb.getSheet("MarksTemplate");
+            if (sheet == null)
+                throw new IllegalArgumentException("Sheet MarksTemplate not found");
+            Row row = sheet.getRow(1);
+            if (row == null)
+                throw new IllegalArgumentException("No data row found");
+            int english = (int) row.getCell(0).getNumericCellValue();
+            int science = (int) row.getCell(1).getNumericCellValue();
+            int maths = (int) row.getCell(2).getNumericCellValue();
+            // save to repository
+            Marksheet sheetEntity = marksheetRepository.findByStudentId(studentId)
+                    .orElseGet(() -> Marksheet.builder().student(studentService.findEntity(studentId)).build());
+            sheetEntity.setEnglish(english);
+            sheetEntity.setScience(science);
+            sheetEntity.setMaths(maths);
+            Marksheet saved = marksheetRepository.save(sheetEntity);
+            return mapToDto(saved);
+        }
+    }
+
+    /**
+     * Generate Excel download for saved marksheet.
+     */
+    public byte[] generateMarksheetDownload(Long studentId) throws IOException {
+        Marksheet ms = marksheetRepository.findByStudentId(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("Marksheet not found for student " + studentId));
+        try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = wb.createSheet("Marks");
+            Row header = sheet.createRow(0);
+            header.createCell(0).setCellValue("English");
+            header.createCell(1).setCellValue("Science");
+            header.createCell(2).setCellValue("Maths");
+            Row dataRow = sheet.createRow(1);
+            dataRow.createCell(0).setCellValue(ms.getEnglish());
+            dataRow.createCell(1).setCellValue(ms.getScience());
+            dataRow.createCell(2).setCellValue(ms.getMaths());
+            wb.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    private com.example.students.dto.MarksheetResponse mapToDto(Marksheet ms) {
+        com.example.students.dto.MarksheetResponse dto = new com.example.students.dto.MarksheetResponse();
+        dto.setId(ms.getId());
+        dto.setStudentId(ms.getStudent().getId());
+        dto.setEnglish(ms.getEnglish());
+        dto.setScience(ms.getScience());
+        dto.setMaths(ms.getMaths());
+        dto.setCreatedAt(ms.getCreatedAt());
+        dto.setUpdatedAt(ms.getUpdatedAt());
+        return dto;
     }
 }
