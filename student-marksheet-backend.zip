@@ -1,0 +1,1 @@
+{"timestamp":"2025-08-19T08:31:13.624+00:00","status":400,"error":"Bad Request","message":"Unknown dependency 'springdoc-openapi-starter-webmvc-ui' check project metadata","path":"/starter.zip"}

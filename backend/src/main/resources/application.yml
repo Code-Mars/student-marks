@@ -1,0 +1,26 @@
+spring:
+  profiles:
+    active: dev
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/students
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: Marshal9758@
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+app:
+  storage:
+    basePath: Marksheets
+
+logging:
+  level:
+    root: INFO
+    com.example.students: DEBUG
